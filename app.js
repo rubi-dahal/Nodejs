@@ -4,6 +4,7 @@ const User = require("./models/userModel");
 const Blog = require("./models/BlogModel");
 const app = express();
 const bcrypt = require("bcrypt");
+require("dotenv").config();
 
 connect();
 app.use(express.json());
@@ -29,6 +30,22 @@ app.listen(3000, function () {
 app.get("/fetch-users", async function (req, res) {
   //user table ma bhako user data chai sent garnu paryo
   const data = await User.find(); //.create() .findByIdAndDelete() .findByIdAndUpdate()
+  res.json({
+    data: data,
+  });
+});
+
+app.get("/fetch-users/:id", async function (req, res) {
+  const id = req.params.id;
+  const data = await User.findById(id).select("-password -__v");
+  res.json({
+    data: data,
+  });
+});
+
+app.get("/fetch-blogs/:id", async function (req, res) {
+  const id = req.params.id;
+  const data = await Blog.findById(id).select("-password -__v");
   res.json({
     data: data,
   });
@@ -81,11 +98,49 @@ app.delete("/delete-blog", async function (req, res) {
   });
 });
 
-// app.put("/edit-blog", async function (req, res) {
-//   const id = req.body.id;
-//   await Blog.updateOne({ _id: id }, { title, content });
+app.put("/update-user/:id", async function (req, res) {
+  const id = req.params.id;
+  const name = req.body.name;
+  const email = req.body.email;
+  const password = bcrypt.hashSync(req.body.password, 10);
+  await User.findByIdAndUpdate(id, { name, email, password });
+  res.json({
+    message: "User with that id updated successfully",
+  });
+});
 
-//   res.json({
-//     message: "Blog with this id is updated Successfully!!!",
-//   });
-// });
+app.put("/edit-blog/:id", async function (req, res) {
+  const id = req.params.id;
+  const title = req.body.title;
+  const subtitle = req.body.subtitle;
+  const description = req.body.description;
+  await Blog.findByIdAndUpdate(id, { title, subtitle, description });
+  res.json({
+    message: "Blog with that id edited successfully",
+  });
+});
+
+//login
+
+app.post("/login", async function (req, res) {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const data = await User.findOne({ email: email });
+  if (!data) {
+    res.json({
+      message: "Not Registered!!!",
+    });
+  } else {
+    const isMatched = bcrypt.compareSync(password, data.password);
+    if (isMatched) {
+      res.json({
+        message: "You Logged In successfully!!!",
+      });
+    } else {
+      res.json({
+        message: "Incorrect password!!!",
+      });
+    }
+  }
+});
